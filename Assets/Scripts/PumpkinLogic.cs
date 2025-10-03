@@ -39,7 +39,7 @@ public class PumpkinLogic : MonoBehaviour
         this.pumpkinClicked?.Invoke(this);
     }
     
-    public int applyEffects(int playerHealth, List<Card> cards, List<Card> otherCards, Player player, bool nullified)
+    public int ApplyEffects(int playerHealth, List<Card> cards, List<Card> otherCards, Player player, bool nullified)
     {
         if (this.effect == "Nullify cards") return playerHealth;
         foreach (Card card in cards)
