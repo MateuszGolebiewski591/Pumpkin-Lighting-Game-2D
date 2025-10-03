@@ -10,7 +10,7 @@ public class Board : MonoBehaviour
         anim = GetComponent<Animator>();
     }
     
-    public void updateText(string newText)
+    public void UpdateText(string newText)
     {
         anim.SetTrigger(newText);
     }

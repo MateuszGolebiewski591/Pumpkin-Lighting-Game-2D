@@ -8,6 +8,7 @@ public class PumpkinLogic : MonoBehaviour
     private Board board;
     private string effect;
     private Func<double, double> application;
+    public event Action<PumpkinLogic> pumpkinClicked;
 
     private void Awake()
     {
@@ -19,6 +20,8 @@ public class PumpkinLogic : MonoBehaviour
     {
         this.effect = givenEffect;
         this.application = givenApplication;
+        this.pumpkin.ResetPumpkin();
+        this.board.UpdateText(givenEffect);
     }
 
     public string GetEffect()
@@ -26,43 +29,55 @@ public class PumpkinLogic : MonoBehaviour
         return this.effect;
     }
 
-    public int ApplyEffects()
+    public void EnablePumpkin()
     {
-        return 1;
+        this.pumpkin.AllowClicking();
+    }
+
+    public void HandleClick()
+    {
+        this.pumpkinClicked?.Invoke(this);
     }
     
-    public int applyEffects(int playerHealth, List<Card> cards, List<Card> otherCards, Player player, bool nullified) {
+    public int applyEffects(int playerHealth, List<Card> cards, List<Card> otherCards, Player player, bool nullified)
+    {
         if (this.effect == "Nullify cards") return playerHealth;
-        foreach (Card card in cards) {
+        foreach (Card card in cards)
+        {
             if ((card.GetCardName() == "Healthy Bone") && !nullified) return playerHealth;
         }
-        foreach (Card card in otherCards) {
+        foreach (Card card in otherCards)
+        {
             if ((card.GetCardName() == "Bad Bone") && !nullified) return playerHealth;
         }
         double mul = 1.0;
-        if (!nullified) {
-            foreach (Card card in cards) {
+        if (!nullified)
+        {
+            foreach (Card card in cards)
+            {
                 mul = card.Apply(mul);
             }
-            foreach (Card card in otherCards) {
+            foreach (Card card in otherCards)
+            {
                 mul = card.Apply(mul);
             }
         }
         double numEffect = this.application(mul);
-        switch (this.effect) {
+        switch (this.effect)
+        {
             case "Half health": return (int)(playerHealth * numEffect);
             case "+1 card": AddOrTakeCard(player, numEffect); return playerHealth;
             case "-1 card": AddOrTakeCard(player, -numEffect); return playerHealth;
             case "-2 card": AddOrTakeCard(player, -numEffect); return playerHealth;
-            case "Clear hand": {
-                if (mul >= 0.0) player.ClearCards();
-                if (mul < 0.0) player.IncreaseCardsOwed(5);
-                return playerHealth;
-            }
-            default : return playerHealth + (int)numEffect;
+            case "Clear hand":
+                {
+                    if (mul >= 0.0) player.ClearCards();
+                    if (mul < 0.0) player.IncreaseCardsOwed(5);
+                    return playerHealth;
+                }
+            default: return playerHealth + (int)numEffect;
         }
     }
-
 
     public void AddOrTakeCard(Player player, double numEffect)
     {

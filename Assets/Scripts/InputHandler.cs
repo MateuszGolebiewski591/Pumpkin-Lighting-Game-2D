@@ -21,7 +21,7 @@ public class InputHandler : MonoBehaviour
         Pumpkin pumpkin = rayHit.collider.GetComponent<Pumpkin>();
         if (pumpkin != null)
         {
-            pumpkin.NextState();
+            pumpkin.ClickResponse();
         }
     }
 }

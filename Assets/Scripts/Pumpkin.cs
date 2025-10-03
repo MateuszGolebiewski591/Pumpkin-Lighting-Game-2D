@@ -6,6 +6,7 @@ public class Pumpkin : MonoBehaviour
     private PumpkinLogic logic;
 
     private bool lit = false;
+    private bool allowClick = false;
 
     private void Awake()
     {
@@ -13,20 +14,29 @@ public class Pumpkin : MonoBehaviour
         logic = GetComponentInParent<PumpkinLogic>();
     }
 
-    public void NextState()
+    public void AllowClicking()
     {
-        if (!lit)
-        {
-            anim.SetTrigger("Lightup");
-            lit = true;
-            
-        }
-        else
-        {
-            anim.SetTrigger("Snuffout");
-            lit = false;
-        }
+        this.allowClick = true;
     }
 
-    
+    public void DisableClicking()
+    {
+        this.allowClick = false;
+    }
+
+    public void ResetPumpkin()
+    {
+        if (lit == true) anim.SetTrigger("Snuffout");
+        this.lit = false;
+        this.allowClick = false;
+    }
+
+    public void ClickResponse()
+    {
+        if (this.allowClick)
+        {
+            anim.SetTrigger("Alight");
+            this.logic.HandleClick();
+        }
+    }    
 }
