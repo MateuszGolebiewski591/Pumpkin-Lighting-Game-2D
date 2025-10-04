@@ -24,19 +24,35 @@ public class PumpkinLogic : MonoBehaviour
         this.board.UpdateText(givenEffect);
     }
 
+    public void Reset()
+    {
+        this.pumpkin.ResetPumpkin();
+    }
+
     public string GetEffect()
     {
         return this.effect;
     }
 
-    public void EnablePumpkin()
+    public void EnableClicking()
     {
         this.pumpkin.AllowClicking();
+    }
+
+
+    public void DisableClicking()
+    {
+        this.pumpkin.DisableClicking();
     }
 
     public void HandleClick()
     {
         this.pumpkinClicked?.Invoke(this);
+    }
+
+    public void TriggerAnimation()
+    {
+        this.pumpkin.TriggerAnim();
     }
     
     public int ApplyEffects(int playerHealth, List<Card> cards, List<Card> otherCards, Player player, bool nullified)

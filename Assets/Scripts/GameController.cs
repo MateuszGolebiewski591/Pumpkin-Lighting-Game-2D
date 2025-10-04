@@ -13,7 +13,8 @@ public class GameController : MonoBehaviour
     private List<PumpkinLogic> pumpkins;
     private List<string> pumpkinMessages = new List<string> { "Halfhealth", "-2health", "+2health", "Nullcards", "+1card", "-1card" };
     private List<Func<double, double>> pumpkinApplications = new List<Func<double, double>> { (t) => t == 0.5 ? 0.75 : t == -0.5 ? 1.5 : Math.Pow(0.5, t), (t) => -2 * t, (t) => 2 * t, (t) => 1.0, (t) => t, (t) => t };
-
+    private int pumpkinIndex1;
+    private int pumpkinIndex2;
 
     private List<PumpkinLogic> MakePumpkins()
     {
@@ -22,7 +23,6 @@ public class GameController : MonoBehaviour
         {
             PumpkinLogic currentPumpkin = this.pumpkinArray[i];
             currentPumpkin.pumpkinClicked += PumpkinChosen;
-            currentPumpkin.AssignRole(pumpkinMessages[i], pumpkinApplications[i]);
             newPumpkins.Add(currentPumpkin);
         }
         return newPumpkins;
@@ -42,23 +42,23 @@ public class GameController : MonoBehaviour
         while (round < 2/*!winner*/)
         {
             //System.out.println("Scores | Player : " + player.getScore() + " | AI : " + ai.getScore());
-            PlayRound(round, this.player, this.ai);
+            yield return PlayRound(round, this.player, this.ai);
             round++;
-            /*if (this.player.GetScore()==3 || this.ai.GetScore()==3) winner = true;
+            if (this.player.GetScore()==3 || this.ai.GetScore()==3) winner = true;
             else {
                 this.deck.Reset();
                 this.deck.AllocateCards(this.player, this.ai);
-            }*/
+            }
         }
         /*System.out.println("Scores | Player : " + player.getScore() + " | AI : " + ai.getScore());
         if (player.getScore()==3 && ai.getScore() == 3) System.out.println("It's a draw!");
         else if (player.getScore() == 3) System.out.println("You win!");
         else System.out.println("You lost!");*/
-
+        Debug.Log("Successfull execution");
         yield return null;
     }
 
-    private void PlayRound(int round, Player player, AI ai)
+    private IEnumerator PlayRound(int round, Player player, AI ai)
     {
         Player player1;
         Player player2;
@@ -72,8 +72,8 @@ public class GameController : MonoBehaviour
             player1 = ai;
             player2 = player;
         }
-        player1.updateHealth(5);
-        player2.updateHealth(5);
+        player1.UpdateHealth(5);
+        player2.UpdateHealth(5);
         bool roundEnd = false;
         int turnCounter = 1;
         while (turnCounter < 2 /*!roundEnd*/)
@@ -81,8 +81,9 @@ public class GameController : MonoBehaviour
             AddPumpkins(turnCounter);
             //System.out.println("\nRound " + round + ", Turn " + turnCounter);
             //System.out.println("Player Health " + player.getHealth() + "| AI Health " + ai.getHealth() + "| Deck size " + this.deck.size() + "\n");
-            //List<Pumpkin> intoTurns = RandomisePumpkins();
-            //roundEnd = PlayNextTurn(player1, player2, intoTurns);
+            RandomisePumpkins();
+            yield return PlayNextTurn(player1, player2);
+            roundEnd = player1.GetHealth() == 0 || player2.GetHealth() == 0;
             turnCounter++;
             player1.IncreaseCardsOwed();
             player2.IncreaseCardsOwed();
@@ -90,21 +91,19 @@ public class GameController : MonoBehaviour
         }
         if (player2.GetHealth() == 0) player1.IncreaseScore();
         if (player1.GetHealth() == 0) player2.IncreaseScore();
-        ResetPumpkins();
-
-
-        Debug.Log("Successfull execution");
-        return;
+        yield return new WaitForSeconds(2f);
+        yield return ResetPumpkins();
     }
 
-    private void ResetPumpkins()
+    private IEnumerator ResetPumpkins()
     {
         this.pumpkinMessages = new List<string> { "Halfhealth", "-2health", "+2health", "Nullcards", "+1card", "-1card" };
         this.pumpkinApplications = new List<Func<double, double>> { (t) => t == 0.5 ? 0.75 : t == -0.5 ? 1.5 : Math.Pow(0.5, t), (t) => -2 * t, (t) => 2 * t, (t) => 1.0, (t) => t, (t) => t };
-        for (int i = 0; i < pumpkins.Count; i++)
+        foreach (PumpkinLogic pumpkin in this.pumpkins)
         {
-            this.pumpkins[i].AssignRole(pumpkinMessages[i], pumpkinApplications[i]);
+            pumpkin.Reset();
         }
+        yield return null;
     }
 
     public void AddPumpkins(int currentTurn)
@@ -132,12 +131,11 @@ public class GameController : MonoBehaviour
     }
 
 
-
     public void RandomisePumpkins()
     {
         List<string> messages = new List<string>(this.pumpkinMessages);
         List<Func<double, double>> applications = new List<Func<double, double>>(this.pumpkinApplications);
-        for (int i = 0; i < 5; i++)
+        for (int i = 0; i < this.pumpkins.Count; i++)
         {
             int index = UnityEngine.Random.Range(0, messages.Count);
             string chosenString = messages[index];
@@ -145,26 +143,59 @@ public class GameController : MonoBehaviour
             this.pumpkins[i].AssignRole(chosenString, chosenApplication);
             messages.RemoveAt(index);
             applications.RemoveAt(index);
+        }    
+    }
+
+
+    public IEnumerator PlayNextTurn(Player player1, Player player2) {
+        foreach (PumpkinLogic pumpkin in this.pumpkins)
+        {
+            pumpkin.EnableClicking();
         }
+        List<PumpkinLogic> clonePumpkins = new List<PumpkinLogic>(this.pumpkins);
+        if (player1.IsAi())
+        {
+            this.pumpkinIndex1 = player1.PickPumpkin(clonePumpkins);
+            this.pumpkins[this.pumpkinIndex1].TriggerAnimation();
+            this.pumpkins[this.pumpkinIndex1].DisableClicking();
+        }
+        else
+        {
+            this.pumpkinIndex1 = -1;
+            yield return new WaitUntil(() => this.pumpkinIndex1 != -1);
+            foreach (PumpkinLogic pumpkin in this.pumpkins)
+            {
+                pumpkin.DisableClicking();
+            }
+            
+        }
+        clonePumpkins.RemoveAt(this.pumpkinIndex1);
+        yield return new WaitForSeconds(2f);
+        if (player2.IsAi())
+        {
+            this.pumpkinIndex2 = this.pumpkins.IndexOf(clonePumpkins[player2.PickPumpkin(clonePumpkins)]);
+            this.pumpkins[this.pumpkinIndex2].EnableClicking();
+            this.pumpkins[this.pumpkinIndex2].TriggerAnimation();
+            this.pumpkins[this.pumpkinIndex2].DisableClicking();
+        }
+        else
+        {
+            this.pumpkinIndex2 = -1;
+            yield return new WaitUntil(() => this.pumpkinIndex2 != -1);
+            foreach (PumpkinLogic pumpkin in this.pumpkins)
+            {
+                pumpkin.DisableClicking();
+            }
+        }
+
+        //We will only allow one card in this version
+
+        //List<Card> p2Card = player2.GetCard();
+        //List<Card> p1Card = player1.GetCard();
+        //CalculateResult(p1Pumpkin, p2Pumpkin, p1Card, p2Card, player1, player2);
     }
 
-    //The function below will have the waiting for player / ai input
-
-    /*public boolean PlayNextTurn(Player player1, Player player2, List<Pumpkin> pumpkinsOrigin) {
-        List<Pumpkin> pumpkins = new ArrayList<>(pumpkinsOrigin);
-        int chosen = player1.pickPumpkin(pumpkins)-1;
-        //Pumpkin p1Pumpkin = pumpkins.get(chosen);
-        pumpkins.RemoveAt(chosen);
-        chosen = player2.PickPumpkin(pumpkins)-1;
-        Pumpkin p2Pumpkin = pumpkins[chosen];
-        pumpkins.RemoveAt(chosen);
-        List<Card> p2Card = player2.GetCard();
-        List<Card> p1Card = player1.GetCard();
-        CalculateResult(p1Pumpkin, p2Pumpkin, p1Card, p2Card, player1, player2);
-        return player1.getHealth() == 0 || player2.getHealth() == 0;
-    }
-
-    public void CalculateResult(Pumpkin p1Pumpkin, Pumpkin p2Pumpkin, List<Card> p1Card, List<Card> p2Card, Player player1, Player player2) {
+    /*public void CalculateResult(Pumpkin p1Pumpkin, Pumpkin p2Pumpkin, List<Card> p1Card, List<Card> p2Card, Player player1, Player player2) {
         int p1health = player1.GetHealth();
         int p2health = player2.GetHealth();
         bool nullified = false;
@@ -182,7 +213,8 @@ public class GameController : MonoBehaviour
 
     public void PumpkinChosen(PumpkinLogic chosenPumpkin)
     {
-
+        if (this.pumpkinIndex1 == -1) this.pumpkinIndex1 = this.pumpkins.IndexOf(chosenPumpkin);
+        else this.pumpkinIndex2 = this.pumpkins.IndexOf(chosenPumpkin);
     }
 
     public void CardChosen(Player playerChoosing, Card chosenCard)

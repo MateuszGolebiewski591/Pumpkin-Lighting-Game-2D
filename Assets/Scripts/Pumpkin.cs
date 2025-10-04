@@ -26,7 +26,7 @@ public class Pumpkin : MonoBehaviour
 
     public void ResetPumpkin()
     {
-        if (lit == true) anim.SetTrigger("Snuffout");
+        if (this.lit == true) anim.SetTrigger("Snuffout");
         this.lit = false;
         this.allowClick = false;
     }
@@ -35,8 +35,17 @@ public class Pumpkin : MonoBehaviour
     {
         if (this.allowClick)
         {
-            anim.SetTrigger("Alight");
+            anim.SetTrigger("Lightup");
+            this.lit = true;
             this.logic.HandleClick();
+        }
+    }  
+    public void TriggerAnim()
+    {
+        if (this.allowClick)
+        {
+            anim.SetTrigger("Lightup");
+            this.lit = true;
         }
     }    
 }

@@ -48,10 +48,21 @@ public class Player : MonoBehaviour
         }
         return false;
     }
-    
-    public void updateHealth(int newHealth) {
+
+    public void UpdateHealth(int newHealth)
+    {
         if (newHealth > 5) this.health = 5;
         else if (newHealth < 0) this.health = 0;
         else this.health = newHealth;
+    }
+
+    public virtual bool IsAi()
+    {
+        return false;
+    }
+
+    public virtual int PickPumpkin(List<PumpkinLogic> pumpkins)
+    {
+        return -1;
     }
 }
