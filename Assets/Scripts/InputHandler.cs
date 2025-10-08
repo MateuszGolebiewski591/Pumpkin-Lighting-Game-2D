@@ -23,5 +23,13 @@ public class InputHandler : MonoBehaviour
         {
             pumpkin.ClickResponse();
         }
+        else
+        {
+            Card card = rayHit.collider.GetComponent<Card>();
+            if (card != null)
+            {
+                card.ClickResponse();
+            }
+        }
     }
 }

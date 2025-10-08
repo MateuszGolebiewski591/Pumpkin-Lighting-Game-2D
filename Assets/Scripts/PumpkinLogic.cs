@@ -55,37 +55,22 @@ public class PumpkinLogic : MonoBehaviour
         this.pumpkin.TriggerAnim();
     }
     
-    public int ApplyEffects(int playerHealth, List<Card> cards, List<Card> otherCards, Player player, bool nullified)
+    public int ApplyEffects(int playerHealth, Card card, Card otherCard, Player player, bool nullified)
     {
         if (this.effect == "Nullify cards") return playerHealth;
-        foreach (Card card in cards)
-        {
-            if ((card.GetCardName() == "Healthy Bone") && !nullified) return playerHealth;
-        }
-        foreach (Card card in otherCards)
-        {
-            if ((card.GetCardName() == "Bad Bone") && !nullified) return playerHealth;
-        }
+        if ((card.GetCardName() == "Healthy Bone") && !nullified) return playerHealth;
+        if ((otherCard.GetCardName() == "Bad Bone") && !nullified) return playerHealth;
+        
         double mul = 1.0;
-        if (!nullified)
-        {
-            foreach (Card card in cards)
-            {
-                mul = card.Apply(mul);
-            }
-            foreach (Card card in otherCards)
-            {
-                mul = card.Apply(mul);
-            }
-        }
+        if (!nullified) mul = otherCard.Apply(card.Apply(mul));
         double numEffect = this.application(mul);
         switch (this.effect)
         {
-            case "Half health": return (int)(playerHealth * numEffect);
-            case "+1 card": AddOrTakeCard(player, numEffect); return playerHealth;
-            case "-1 card": AddOrTakeCard(player, -numEffect); return playerHealth;
-            case "-2 card": AddOrTakeCard(player, -numEffect); return playerHealth;
-            case "Clear hand":
+            case "Halfhealth": return (int)(playerHealth * numEffect);
+            case "+1card": AddOrTakeCard(player, numEffect); return playerHealth;
+            case "-1card": AddOrTakeCard(player, -numEffect); return playerHealth;
+            case "-2cards": AddOrTakeCard(player, -numEffect); return playerHealth;
+            case "Clearhand":
                 {
                     if (mul >= 0.0) player.ClearCards();
                     if (mul < 0.0) player.IncreaseCardsOwed(5);

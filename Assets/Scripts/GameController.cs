@@ -15,6 +15,8 @@ public class GameController : MonoBehaviour
     private List<Func<double, double>> pumpkinApplications = new List<Func<double, double>> { (t) => t == 0.5 ? 0.75 : t == -0.5 ? 1.5 : Math.Pow(0.5, t), (t) => -2 * t, (t) => 2 * t, (t) => 1.0, (t) => t, (t) => t };
     private int pumpkinIndex1;
     private int pumpkinIndex2;
+    private Card p1Card;
+    private Card p2Card;
 
     private List<PumpkinLogic> MakePumpkins()
     {
@@ -30,7 +32,9 @@ public class GameController : MonoBehaviour
 
     void Start()
     {
+        
         this.pumpkins = MakePumpkins();
+        this.player.cardClicked += CardChosen;
         StartCoroutine(MainGame());
     }
 
@@ -39,13 +43,14 @@ public class GameController : MonoBehaviour
         this.deck.AllocateCards(this.player, this.ai);
         bool winner = false;
         int round = 1;
-        while (round < 2/*!winner*/)
+        while (!winner)
         {
             //System.out.println("Scores | Player : " + player.getScore() + " | AI : " + ai.getScore());
             yield return PlayRound(round, this.player, this.ai);
             round++;
-            if (this.player.GetScore()==3 || this.ai.GetScore()==3) winner = true;
-            else {
+            if (this.player.GetScore() == 3 || this.ai.GetScore() == 3) winner = true;
+            else
+            {
                 this.deck.Reset();
                 this.deck.AllocateCards(this.player, this.ai);
             }
@@ -76,7 +81,7 @@ public class GameController : MonoBehaviour
         player2.UpdateHealth(5);
         bool roundEnd = false;
         int turnCounter = 1;
-        while (turnCounter < 2 /*!roundEnd*/)
+        while (!roundEnd)
         {
             AddPumpkins(turnCounter);
             //System.out.println("\nRound " + round + ", Turn " + turnCounter);
@@ -88,6 +93,8 @@ public class GameController : MonoBehaviour
             player1.IncreaseCardsOwed();
             player2.IncreaseCardsOwed();
             this.deck.Take(player1, player2);
+            this.p1Card.Used();
+            this.p2Card.Used();
         }
         if (player2.GetHealth() == 0) player1.IncreaseScore();
         if (player1.GetHealth() == 0) player2.IncreaseScore();
@@ -143,11 +150,12 @@ public class GameController : MonoBehaviour
             this.pumpkins[i].AssignRole(chosenString, chosenApplication);
             messages.RemoveAt(index);
             applications.RemoveAt(index);
-        }    
+        }
     }
 
 
-    public IEnumerator PlayNextTurn(Player player1, Player player2) {
+    public IEnumerator PlayNextTurn(Player player1, Player player2)
+    {
         foreach (PumpkinLogic pumpkin in this.pumpkins)
         {
             pumpkin.EnableClicking();
@@ -167,7 +175,7 @@ public class GameController : MonoBehaviour
             {
                 pumpkin.DisableClicking();
             }
-            
+
         }
         clonePumpkins.RemoveAt(this.pumpkinIndex1);
         yield return new WaitForSeconds(2f);
@@ -187,27 +195,47 @@ public class GameController : MonoBehaviour
                 pumpkin.DisableClicking();
             }
         }
-
-        //We will only allow one card in this version
-
-        //List<Card> p2Card = player2.GetCard();
-        //List<Card> p1Card = player1.GetCard();
-        //CalculateResult(p1Pumpkin, p2Pumpkin, p1Card, p2Card, player1, player2);
+        yield return new WaitForSeconds(1f);
+        if (player2.IsAi())
+        {
+            this.p2Card = player2.GetCard();
+        }
+        else
+        {
+            this.p2Card = null;
+            player2.EnableCardClicking();
+            yield return new WaitUntil(() => this.p2Card != null);
+        }
+        yield return new WaitForSeconds(1f);
+        if (player1.IsAi())
+        {
+            this.p1Card = player1.GetCard();
+        }
+        else
+        {
+            this.p1Card = null;
+            player1.EnableCardClicking();
+            yield return new WaitUntil(() => this.p1Card != null);
+        }
+        yield return new WaitForSeconds(2f);
+        CalculateResult(this.pumpkins[this.pumpkinIndex1], this.pumpkins[this.pumpkinIndex2], player1, player2);
+        yield return new WaitForSeconds(2f);
     }
 
-    /*public void CalculateResult(Pumpkin p1Pumpkin, Pumpkin p2Pumpkin, List<Card> p1Card, List<Card> p2Card, Player player1, Player player2) {
+    public void CalculateResult(PumpkinLogic p1Pumpkin, PumpkinLogic p2Pumpkin, Player player1, Player player2)
+    {
         int p1health = player1.GetHealth();
         int p2health = player2.GetHealth();
         bool nullified = false;
         if (p1Pumpkin.GetEffect() == "Nullcards") nullified = true;
         if (p2Pumpkin.GetEffect() == "Nullcards") nullified = true;
-        p1health = p1Pumpkin.ApplyEffects(p1health, p1Card, p2Card, player1, nullified);
-        p2health = p1Pumpkin.ApplyEffects(p2health, p2Card, p1Card, player2, nullified);
-        p1health = p2Pumpkin.ApplyEffects(p1health, p1Card, p2Card, player1, nullified);
-        p2health = p2Pumpkin.ApplyEffects(p2health, p2Card, p1Card, player2, nullified);
+        p1health = p1Pumpkin.ApplyEffects(p1health, this.p1Card, this.p2Card, player1, nullified);
+        p2health = p1Pumpkin.ApplyEffects(p2health, this.p2Card, this.p1Card, player2, nullified);
+        p1health = p2Pumpkin.ApplyEffects(p1health, this.p1Card, this.p2Card, player1, nullified);
+        p2health = p2Pumpkin.ApplyEffects(p2health, this.p2Card, this.p1Card, player2, nullified);
         player1.UpdateHealth(p1health);
         player2.UpdateHealth(p2health);
-    }*/
+    }
 
     //The funtion above calls UpdateHealth, which in player, needs to be connected to the health UI unit which needs to be added.
 
@@ -219,6 +247,8 @@ public class GameController : MonoBehaviour
 
     public void CardChosen(Player playerChoosing, Card chosenCard)
     {
-        
+        playerChoosing.DisableCardClicking();
+        if (this.p1Card == null) this.p1Card = chosenCard;
+        else this.p2Card = chosenCard;
     }
 }
