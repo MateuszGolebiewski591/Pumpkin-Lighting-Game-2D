@@ -9,6 +9,7 @@ public class GameController : MonoBehaviour
     [SerializeField] private Deck deck;
     [SerializeField] private Player player;
     [SerializeField] private AI ai;
+    [SerializeField] private GameEndScreen gameEndScreen;
 
     private List<PumpkinLogic> pumpkins;
     private List<string> pumpkinMessages = new List<string> { "Halfhealth", "-2health", "+2health", "Nullcards", "+1card", "-1card" };
@@ -45,7 +46,6 @@ public class GameController : MonoBehaviour
         int round = 1;
         while (!winner)
         {
-            //System.out.println("Scores | Player : " + player.getScore() + " | AI : " + ai.getScore());
             yield return PlayRound(round, this.player, this.ai);
             round++;
             if (this.player.GetScore() == 3 || this.ai.GetScore() == 3) winner = true;
@@ -55,11 +55,9 @@ public class GameController : MonoBehaviour
                 this.deck.AllocateCards(this.player, this.ai);
             }
         }
-        /*System.out.println("Scores | Player : " + player.getScore() + " | AI : " + ai.getScore());
-        if (player.getScore()==3 && ai.getScore() == 3) System.out.println("It's a draw!");
-        else if (player.getScore() == 3) System.out.println("You win!");
-        else System.out.println("You lost!");*/
-        Debug.Log("Successfull execution");
+        if (player.GetScore() == 3 && ai.GetScore() == 3) gameEndScreen.ShowEndScreen("You have drawn");
+        else if (player.GetScore() == 3) gameEndScreen.ShowEndScreen("You win");
+        else gameEndScreen.ShowEndScreen("You lose");
         yield return null;
     }
 
@@ -84,8 +82,6 @@ public class GameController : MonoBehaviour
         while (!roundEnd)
         {
             AddPumpkins(turnCounter);
-            //System.out.println("\nRound " + round + ", Turn " + turnCounter);
-            //System.out.println("Player Health " + player.getHealth() + "| AI Health " + ai.getHealth() + "| Deck size " + this.deck.size() + "\n");
             RandomisePumpkins();
             yield return PlayNextTurn(player1, player2);
             roundEnd = player1.GetHealth() == 0 || player2.GetHealth() == 0;
@@ -236,8 +232,6 @@ public class GameController : MonoBehaviour
         player1.UpdateHealth(p1health);
         player2.UpdateHealth(p2health);
     }
-
-    //The funtion above calls UpdateHealth, which in player, needs to be connected to the health UI unit which needs to be added.
 
     public void PumpkinChosen(PumpkinLogic chosenPumpkin)
     {

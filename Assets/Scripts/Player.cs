@@ -7,12 +7,22 @@ public class Player : MonoBehaviour
     protected List<Card> hand = new List<Card>();
     protected int handSize = 0;
     [SerializeField] private int health = 5;
+    [SerializeField] private Healthbar healthbar;
+    [SerializeField] private ScoreText scoreText;
     private int score = 0;
     private int cardsOwed = 0;
     public event Action<Player, Card> cardClicked;
 
     public int GetHealth() { return this.health; }
-    public void IncreaseScore() { this.score++; }
+    public void IncreaseScore()
+    {
+        this.score++;
+        this.scoreText.UpdateText(!IsAi(), this.score);
+    }
+    void Start()
+    {
+        this.scoreText.UpdateText(!IsAi(), 0);
+    }
     public int GetScore() { return this.score; }
     public void IncreaseCardsOwed() { this.cardsOwed++; }
     public void IncreaseCardsOwed(int increment) { this.cardsOwed += increment; }
@@ -74,6 +84,7 @@ public class Player : MonoBehaviour
         if (newHealth > 5) this.health = 5;
         else if (newHealth < 0) this.health = 0;
         else this.health = newHealth;
+        this.healthbar.UpdateHealth(this.health);
     }
 
     public virtual bool IsAi()

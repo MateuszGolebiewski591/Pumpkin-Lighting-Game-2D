@@ -57,7 +57,7 @@ public class PumpkinLogic : MonoBehaviour
     
     public int ApplyEffects(int playerHealth, Card card, Card otherCard, Player player, bool nullified)
     {
-        if (this.effect == "Nullify cards") return playerHealth;
+        if (this.effect == "Nullcards") return playerHealth;
         if ((card.GetCardName() == "Healthy Bone") && !nullified) return playerHealth;
         if ((otherCard.GetCardName() == "Bad Bone") && !nullified) return playerHealth;
         

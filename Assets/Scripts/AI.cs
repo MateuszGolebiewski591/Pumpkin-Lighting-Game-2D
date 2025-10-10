@@ -10,6 +10,7 @@ public class AI : Player
         return chosen;
     }
 
+
     public override Card GetCard()
     {
         if (base.handSize == 0) return null;
