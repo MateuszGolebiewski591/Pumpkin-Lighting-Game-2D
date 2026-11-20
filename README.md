@@ -2,8 +2,6 @@
 
 ![Pumpkin Lighting Game](docs/bannertitle.png)
 
-# Pumpkin Lighting Game
-
 **A 2D pixel-art card game of shared effects and careful counterplay, played against an AI opponent.**
 
 Designed, programmed and drawn entirely by hand, solo, in Unity.
@@ -116,10 +114,10 @@ The opponent chooses its pumpkins and cards at random from its legal options. It
 
 **Challenge.** The core of the game is working out the final effect on each player from several overlapping inputs: the lit pumpkins, the cards played by both players, and the cards that modify other cards. With up to ten pumpkin effects and five card types, the number of combinations grows quickly. My first implementation used switch statements to handle each case, and it became a scaling nightmare: every new effect or card meant revisiting and extending the branching logic, and the risk of missing a combination grew with each addition.
 
-**Solution.** I replaced the branching logic with **behaviour as data**. Each pumpkin effect and each card manipulation is defined as a **lambda function** (a `Func<double, double>`). The game controller stores them in lists, and distributes them to the corresponding pumpkins and cards. Pumpkin effects take a strength multiplier and return their effect, and cards are functions that transform that multiplier:
+**Solution.** I replaced the branching logic with **behaviour as data**. Each pumpkin effect and each card manipulation is defined as a **lambda function** (`Func<double, double>`). The game controller stores them in lists and hands them out to the pumpkins and cards it creates. Cards transform a strength multiplier, and each pumpkin's lambda turns that multiplier into its final numeric effect:
 
 ```csharp
-// Pumpkin effects unlock as the match progresses
+// Pumpkin effects unlock as the match progresses, each carrying its own lambda
 public void AddPumpkins(int currentTurn)
 {
     if (currentTurn == 3)
@@ -135,7 +133,7 @@ public void AddPumpkins(int currentTurn)
     // ...
 }
 
-// Card modifiers: each one transforms the strength of a pumpkin's effect
+// Card modifiers: each one transforms the strength of the pumpkin effects
 List<Func<double, double>> applications = new List<Func<double, double>>
 {
     (t) => t,        // pass-through
@@ -146,11 +144,39 @@ List<Func<double, double>> applications = new List<Func<double, double>>
 };
 ```
 
-At resolution time, working out the outcome for a player reduces to a **chain of four function calls**, which is determined at runtime from whatever was played. Adding a new pumpkin or card is now a matter of writing one lambda and adding it to a list, with no changes to the resolution logic. It made the game far easier to extend, and it was a satisfying use of functional programming within C#.
+Resolution runs once per player. The player's card and then the opponent's card are applied to a starting multiplier of 1.0, the pumpkin's own lambda converts that into a numeric effect, and the result is applied to the player's health or hand:
+
+```csharp
+public int ApplyEffects(int playerHealth, Card card, Card otherCard, Player player, bool nullified)
+{
+    if (effect == "Nullcards") return playerHealth;
+    if (card.GetCardName() == "Healthy Bone" && !nullified) return playerHealth;   // blocked for self
+    if (otherCard.GetCardName() == "Bad Bone" && !nullified) return playerHealth;  // blocked by opponent
+
+    double mul = 1.0;
+    if (!nullified) mul = otherCard.Apply(card.Apply(mul));  // compose the card modifiers
+    double numEffect = application(mul);                     // pumpkin's own lambda
+
+    switch (effect)
+    {
+        case "Halfhealth": return (int)(playerHealth * numEffect);
+        case "+1card":     AddOrTakeCard(player, numEffect);  return playerHealth;
+        case "-1card":     AddOrTakeCard(player, -numEffect); return playerHealth;
+        // ...
+        case "Clearhand":
+            if (mul >= 0.0) player.ClearCards();         // normal Clear Hand
+            if (mul < 0.0)  player.IncreaseCardsOwed(5); // inverted: grants cards instead
+            return playerHealth;
+        default: return playerHealth + (int)numEffect;
+    }
+}
+```
+
+The combinations that exploded the original switch (every card stacked with every pumpkin) are now handled by composition, so the chain of function calls is assembled at runtime from whatever was played. The only remaining switch dispatches on the *kind* of effect (health or cards), not on combinations. Adding a new pumpkin or card now means writing one lambda and adding it to a list, with no changes to the resolution logic. Edge cases fall out naturally too: an inverted Instant Death heals, and an inverted Clear Hand gives cards. It made the game far easier to extend, and it was a satisfying use of functional programming within C#.
 
 ## What I Learned
 
-**How to structure a Unity project.** This was the first game I made in Unity that was not a tutorial, and the biggest thing I took from it was how to actually structure a project, both in code and in the scene hierarchy. We had attempted this exact game in an earlier game jam, but our unfamiliarity with Unity meant the project broke beyond repair and we had no idea how to fix it. Rebuilding it from the ground up on my own taught me how to organise scenes, objects and scripts so that the project stays understandable and fixable.
+**How to structure a Unity project.** This was the first game I made in Unity that was not a tutorial, and the biggest thing I took from it was how to actually structure a project, both in code and in the scene hierarchy. The game started as a terminal game in Java, and during a game jam we tried to port it into Unity. Our unfamiliarity with the engine meant the project broke beyond repair and we had no idea how to fix it. Rebuilding it from the ground up on my own taught me how to organise scenes, objects and scripts so that the project stays understandable and fixable.
 
 **Animation with the Animator.** I learned how to create animations in the editor using Unity's Animator tool, which I used to bring the pixel art to life. The method I used is outdated compared to what I use now, but it gave me a solid base to build on.
 
@@ -158,11 +184,13 @@ At resolution time, working out the outcome for a player reduces to a **chain of
 
 **What I would do differently.** The game is built around a central controller that manually drives everything in an imperative, step-by-step process. Nowadays I use a more asynchronous structure based on **event channels**, which fully uses the observer pattern. If I rebuilt the game, each component would define its own local behaviour in response to observed state changes instead of being told what to do. That approach is easier to maintain and scale, easier to reason about, and more decoupled, which makes debugging simpler. I would also build a smarter AI that reasons about the outcome of its choices instead of picking at random, although I find the game can already be hard to win at times.
 
-**Doing everything myself.** Designing the rules, writing every line of code and drawing every sprite in Piskel gave me a full view of how a small game fits together, and a real appreciation of how much work is hidden in even a simple project.
+**What I am proudest of.** The animations, and the robustness of the system as a whole for my ability at the time. Even edge cases such as inverted effects, nullified cards and blocked pumpkins behave consistently because they all pass through the same composable pipeline.
+
+**Doing everything myself.** Designing the rules, writing every line of code, and drawing every sprite and even the pixel font by hand in Piskel gave me a full view of how a small game fits together, and a real appreciation of how much work is hidden in even a simple project.
 
 ## Running the Project
 
-**Play the game:** [itch.io](https://typevoidgames.itch.io/pumpkin-lighting-game)
+**Play the game:** download the Windows build from [itch.io](https://typevoidgames.itch.io/pumpkin-lighting-game)
 
 **Open the project:**
 
@@ -172,7 +200,7 @@ At resolution time, working out the outcome for a player reduces to a **chain of
 
 ## Credits
 
-Created by **[Mateusz Golebiewski](https://github.com/MateuszGolebiewski591)** (TypeVoidGames). All code and artwork is original and was made by hand, with pixel art drawn in [Piskel](https://www.piskelapp.com/).
+Created by **[Mateusz Golebiewski](https://github.com/MateuszGolebiewski591)** (TypeVoidGames). All code and artwork is original and was made by hand, with the pixel art and the pixel font drawn letter by letter in [Piskel](https://www.piskelapp.com/).
 
 ## Licence
 
